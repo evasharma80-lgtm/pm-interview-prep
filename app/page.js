@@ -10,6 +10,7 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState('');
   const [thread, setThread] = useState([]); // [{ question, answer, sources }]
   const [topics, setTopics] = useState([]); // [{ category, count }]
+  const [elapsed, setElapsed] = useState(0);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -31,17 +32,38 @@ export default function Home() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [thread, status]);
 
+  // Visible elapsed-time counter while a request is in flight — this makes
+  // a genuinely slow (but working) response obvious, instead of looking stuck.
+  useEffect(() => {
+    if (status !== 'loading') {
+      setElapsed(0);
+      return;
+    }
+    const start = Date.now();
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - start) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [status]);
+
   async function ask(q) {
     if (!q.trim()) return;
     setStatus('loading');
     setErrorMsg('');
+
+    // Client-side timeout: if the server hasn't responded in 45s, fail
+    // loudly instead of hanging silently.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
 
     try {
       const res = await fetch('/api/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: q }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       const json = await res.json();
 
       if (!res.ok) {
@@ -54,6 +76,12 @@ export default function Home() {
       setQuestion('');
       setStatus('idle');
     } catch (err) {
+      clearTimeout(timeoutId);
+      if (err.name === 'AbortError') {
+        setStatus('error');
+        setErrorMsg('Request timed out after 45s — the server may be slow or unreachable. Try again.');
+        return;
+      }
       setStatus('error');
       setErrorMsg(err.message || 'Network error — could not reach the server.');
     }
@@ -104,6 +132,7 @@ export default function Home() {
                   <div className="avatar avatar-ai">AI</div>
                   <div className="bubble bubble-answer">
                     <span className="thinking-dots"><span></span><span></span><span></span></span>
+                    {elapsed > 2 && <span style={{ marginLeft: 8, fontSize: 12, color: '#9A9D9F' }}>{elapsed}s</span>}
                   </div>
                 </div>
               )}
