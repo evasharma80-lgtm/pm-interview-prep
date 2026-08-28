@@ -72,14 +72,13 @@ export default function Documents() {
         </button>
       </form>
 
-      <h2 style={{ fontFamily: 'Newsreader, serif', fontWeight: 500, fontSize: 18, color: '#1F3864' }}>
-        Existing material
-      </h2>
-      <div className="card">
-        {documents.length === 0 && <p style={{ fontSize: 13, color: '#9A9D9F' }}>Nothing added yet.</p>}
+      <p className="section-title">Existing material</p>
+      {documents.length === 0 && <p style={{ fontSize: 13, color: '#9A9D9F' }}>Nothing added yet.</p>}
+      <div className="doc-grid">
         {documents.map((d) => (
-          <div key={d.id} className="doc-row">
-            <span className="doc-title">{d.title}</span>
+          <div key={d.id} className="doc-card">
+            <div className="doc-card-title">{d.title}</div>
+            <div className="doc-card-preview">{d.content}</div>
             {d.category && <span className="doc-badge">{d.category}</span>}
           </div>
         ))}

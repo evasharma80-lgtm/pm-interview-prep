@@ -29,7 +29,7 @@ export default function Home() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [thread]);
+  }, [thread, status]);
 
   async function ask(q) {
     if (!q.trim()) return;
@@ -67,23 +67,46 @@ export default function Home() {
   return (
     <div>
       <h1>PM interview prep</h1>
-      <p className="intro">Ask a question — answers are grounded in your indexed prep material, with sources cited.</p>
+      <p className="intro">Ask a question — answers are grounded in your indexed prep material where relevant, with sources cited.</p>
 
       <div className="app-layout">
         <div>
+          {thread.length === 0 && status !== 'loading' && (
+            <div className="empty-state">
+              <strong>No questions yet</strong>
+              Ask something below, or click a topic on the right to get started.
+            </div>
+          )}
+
           {thread.length > 0 && (
             <div className="thread">
               {thread.map((turn, i) => (
-                <div key={i}>
-                  <div className="bubble bubble-question">{turn.question}</div>
-                  <div className="bubble bubble-answer" style={{ marginTop: 8 }}>
-                    {turn.answer}
-                    {turn.sources.length > 0 && (
-                      <div className="bubble-sources">Sources: {turn.sources.join(', ')}</div>
-                    )}
+                <div key={i} className="turn">
+                  <div className="msg-row from-user">
+                    <div className="bubble bubble-question">{turn.question}</div>
+                    <div className="avatar avatar-user">You</div>
                   </div>
+                  <div className="msg-row">
+                    <div className="avatar avatar-ai">AI</div>
+                    <div className="bubble bubble-answer">{turn.answer}</div>
+                  </div>
+                  {turn.sources.length > 0 && (
+                    <div className="source-chips">
+                      {turn.sources.map((s, j) => (
+                        <span key={j} className="source-chip">{s}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
+              {status === 'loading' && (
+                <div className="msg-row">
+                  <div className="avatar avatar-ai">AI</div>
+                  <div className="bubble bubble-answer">
+                    <span className="thinking-dots"><span></span><span></span><span></span></span>
+                  </div>
+                </div>
+              )}
               <div ref={bottomRef} />
             </div>
           )}
@@ -95,7 +118,11 @@ export default function Home() {
               placeholder="e.g. How do I structure a RICE prioritization answer?"
             />
             <button type="submit" disabled={status === 'loading'}>
-              {status === 'loading' ? 'Thinking…' : 'Ask'}
+              {status === 'loading' ? (
+                <span className="thinking-dots"><span></span><span></span><span></span></span>
+              ) : (
+                'Ask'
+              )}
             </button>
           </form>
           {status === 'error' && <p className="error-text">Error: {errorMsg}</p>}
@@ -110,7 +137,7 @@ export default function Home() {
               className="topic-chip"
               onClick={() => ask(`Tell me about ${t.category}`)}
             >
-              {t.category} <span className="topic-count">({t.count})</span>
+              {t.category} <span className="topic-count">{t.count}</span>
             </button>
           ))}
         </div>
